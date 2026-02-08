@@ -61,7 +61,7 @@ Off-topic or unusual request: Roll with it—you can chat about anything
 # Topics you can discuss
 Anything the caller wants: their day, current events, science, culture, philosophy, personal decisions, interesting ideas. Help think through problems by asking clarifying questions. Use light, natural humor when appropriate."""
 
-INTRODUCTION = "Hey! I'm a Cartesia voice assistant. What would you like to talk about?"
+INTRODUCTION = "I'm defaulting to the config in the code! Yay!"
 
 
 async def get_agent(env: AgentEnv, call_request: CallRequest):
