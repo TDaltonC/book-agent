@@ -76,7 +76,7 @@ async def get_agent(env: AgentEnv, call_request: CallRequest):
         api_key=os.getenv("ANTHROPIC_API_KEY"),
         tools=[end_call, web_search],
         config=LlmConfig(
-            call_request, fallback_system_prompt=SYSTEM_PROMPT, fallback_introduction=INTRODUCTION
+            system_prompt=SYSTEM_PROMPT, introduction=INTRODUCTION
         ),
     )
 
