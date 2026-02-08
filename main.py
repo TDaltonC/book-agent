@@ -1,9 +1,38 @@
+import json
 import os
+import tempfile
 
+from google.cloud import firestore
 from loguru import logger
 
 from line.llm_agent import LlmAgent, LlmConfig, end_call
 from line.voice_agent_app import AgentEnv, CallRequest, VoiceAgentApp
+
+GCP_PROJECT = "o-phone-c0b25"
+
+
+def get_firestore_client() -> firestore.Client:
+    """Create Firestore client, handling both local and Cartesia deployment."""
+    creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+    if creds_json:
+        # On Cartesia: credentials passed as env var JSON string
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            f.write(creds_json)
+            f.flush()
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = f.name
+    return firestore.Client(project=GCP_PROJECT)
+
+
+def fetch_books_context(phone_number: str) -> str:
+    """Look up pending call context from Firestore by phone number."""
+    try:
+        db = get_firestore_client()
+        doc = db.collection("pending_calls").document(phone_number).get()
+        if doc.exists:
+            return doc.to_dict().get("books_context", "")
+    except Exception as e:
+        logger.error(f"Firestore lookup failed: {e}")
+    return ""
 
 SYSTEM_PROMPT = """\
 You are a friendly, warm voice agent that calls parents to let them know that a curated selection of library books — chosen based on their child's interests expressed during a call with The Answering Machine — are ready for pickup.
@@ -130,9 +159,12 @@ INTRODUCTION = "Hi, is this Dalton?"
 
 
 async def get_agent(env: AgentEnv, call_request: CallRequest):
-    # Read book context from metadata if provided by call.py
-    metadata = call_request.metadata or {}
-    books_context = metadata.get("books_context", "")
+    # Look up book context from Firestore using the dialed phone number
+    phone_number = call_request.to
+    logger.info(f"Starting new call {call_request.call_id} to {phone_number}")
+
+    books_context = fetch_books_context(phone_number)
+    logger.info(f"Books context: {books_context[:100] if books_context else 'none'}")
 
     system_prompt = SYSTEM_PROMPT
     if books_context:
@@ -142,11 +174,6 @@ async def get_agent(env: AgentEnv, call_request: CallRequest):
             "You MUST mention these specific books by title during the call. "
             "Use the reasons to briefly connect each book to Leo's interests."
         )
-
-    logger.info(
-        f"Starting new call for {call_request.call_id}. "
-        f"Books context: {books_context[:100] if books_context else 'none'}"
-    )
 
     return LlmAgent(
         model="anthropic/claude-haiku-4-5-20251001",
