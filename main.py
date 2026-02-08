@@ -6,6 +6,7 @@ from line.llm_agent import LlmAgent, LlmConfig, end_call, web_search
 from line.voice_agent_app import AgentEnv, CallRequest, VoiceAgentApp
 
 #  ANTHROPIC_API_KEY=your-key uv python main.py
+#  Force redeploy: 2026-02-08
 
 SYSTEM_PROMPT = """You are a friendly voice assistant built with Cartesia, designed for natural, open-ended conversation.
 
